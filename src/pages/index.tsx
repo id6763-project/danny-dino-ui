@@ -1,10 +1,12 @@
 import Head from 'next/head';
 import { Component } from 'react';
+import { Transport } from 'tone';
 import { ComponentsSection } from '../components/components';
 import { Hero } from '../components/hero';
 import { LogsSection } from '../components/logs';
 import { StepsSection } from '../components/steps';
 import { Api } from '../core/api';
+import { audioPlayer } from '../core/audio-player';
 import { Danny, DannySetup } from '../core/danny';
 import { Installation } from '../core/installation';
 import { Step } from '../core/step';
@@ -14,6 +16,7 @@ export interface HomeState {
   danny: Danny;
   setup: DannySetup;
   activeStep?: number;
+  isRunning: boolean;
 }
 
 export default class Home extends Component<HomeProps, HomeState> {
@@ -26,6 +29,7 @@ export default class Home extends Component<HomeProps, HomeState> {
       setup: {
         steps: [],
       },
+      isRunning: false,
     };
   }
 
@@ -43,40 +47,95 @@ export default class Home extends Component<HomeProps, HomeState> {
     poll();
   }
 
-  connectToInstallation() {
-    Installation.connect().then(() => this.startPolling());
-  }
-
   startInstallation() {
     const processStep = (index: number) => {
       const { setup } = this.state;
 
-      this.setState({
-        activeStep: index,
-      });
       const currentStep = setup.steps[index];
 
-      if (!currentStep) {
+      console.log('Processing Steps - Running = ', this.state.isRunning);
+
+      if (!currentStep || !this.state.isRunning) {
+        if (!currentStep) {
+          this.setState({
+            activeStep: -1,
+            setup: {
+              steps: this.state.setup.steps.map((step) => {
+                step.isComplete = false;
+                return step;
+              }),
+            },
+          });
+        }
         return;
+      } else {
+        this.setState({
+          activeStep: index,
+        });
       }
 
-      console.log('Current Ste', currentStep);
-      currentStep.execute(this.state.danny).then(() => processStep(index + 1));
+      currentStep
+        .execute(() => this.state.danny)
+        .then(() => {
+          if (this.state.isRunning) {
+            processStep(index + 1);
+          } else {
+            this.setState({
+              setup: {
+                steps: this.state.setup.steps.map((step) => {
+                  step.isComplete = false;
+                  return step;
+                }),
+              },
+            });
+          }
+        });
     };
 
-    processStep(0);
+    Installation.stop().then(() =>
+      Installation.start().then(() => {
+        this.setState(
+          {
+            activeStep: 0,
+            isRunning: true,
+          },
+          () => processStep(0)
+        );
+      })
+    );
+  }
+
+  stopInstallation() {
+    audioPlayer.stop();
+    this.setState({
+      activeStep: -1,
+      isRunning: false,
+      setup: {
+        steps: this.state.setup.steps.map((step) => {
+          step.isComplete = false;
+          return step;
+        }),
+      },
+    });
+
+    Installation.stop().then(() => {});
   }
 
   componentDidMount() {
-    Api.invoke<Danny>('/danny').then((danny) => this.setState({ danny }));
-    Api.invoke<DannySetup>('/danny/setup').then((setup) =>
-      this.setState({
-        setup: {
-          steps: setup.steps.map((step) => new Step(step)),
-        },
-        activeStep: -1,
-      })
-    );
+    audioPlayer.speedUp(2);
+    Installation.stop().then(() => {
+      Api.invoke<Danny>('/danny').then((danny) => this.setState({ danny }));
+      Api.invoke<DannySetup>('/danny/setup').then((setup) =>
+        this.setState({
+          setup: {
+            steps: setup.steps.map((step) => new Step(step)),
+          },
+          activeStep: -1,
+        })
+      );
+
+      this.startPolling();
+    });
   }
 
   render() {
@@ -92,8 +151,9 @@ export default class Home extends Component<HomeProps, HomeState> {
         <div className='page w-3/4 mx-auto mt-16'>
           <Hero
             danny={this.state.danny}
-            onConnect={() => this.connectToInstallation()}
+            onConnect={() => Installation.connect()}
             onStart={() => this.startInstallation()}
+            onStop={() => this.stopInstallation()}
           ></Hero>
 
           <div className='flex'>

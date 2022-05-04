@@ -21,8 +21,7 @@ export class StepsSection extends Component<StepsSectionProps> {
         <div>
           {this.props.steps.map((step, index) => (
             <div key={index} className='py-2'>
-              {this.props.activeStep === index &&
-              this.props.danny.status === 'started' ? (
+              {this.props.activeStep === index ? (
                 <div className='bg-neutral-700 text-neutral-100 py-4 px-4'>
                   <div className='loader'></div>
                   <span className='font-bold'>{step.name}</span>

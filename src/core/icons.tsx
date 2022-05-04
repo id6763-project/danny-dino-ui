@@ -31,7 +31,7 @@ export const PauseSvg = (
 export const StopSvg = (
   <svg
     xmlns='http://www.w3.org/2000/svg'
-    className='h-8 w-8'
+    className='h-28 w-28'
     viewBox='0 0 20 20'
     fill='currentColor'
   >

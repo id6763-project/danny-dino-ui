@@ -4,6 +4,7 @@ import { Section } from './section';
 
 export interface JFComponent {
   name: string;
+  type: string;
   operations: { name: string; invoke: string }[];
   state: any;
 }
@@ -29,9 +30,25 @@ export class ComponentsSection extends Component<ComponentsSectionProps> {
               <div className='px-4 py-0 flex justify-between'>
                 <span className='text-neutral-500 font-bold flex items-center'>
                   {component.name}
-                  {component.state.isActive ? (
-                    <span className='bg-green-700 text-green-100 px-2 py-1 rounded-full font-bold text-[0.6em] ml-2'>
-                      ACTIVE
+                  {component.type === 'bone' ? (
+                    component.state.isActive ? (
+                      <span className='bg-green-700 text-green-100 px-2 py-1 rounded-full font-bold text-[0.6em] ml-2'>
+                        ACTIVE
+                      </span>
+                    ) : (
+                      <>
+                        <span className='bg-red-700 text-red-100 px-2 py-1 rounded-full font-bold text-[0.6em] ml-2'>
+                          INACTIVE
+                        </span>
+                      </>
+                    )
+                  ) : (
+                    <></>
+                  )}
+
+                  {component.state && component.state.length ? (
+                    <span className='border-green-700 border-1 bg-green-200 text-green-900 px-2 py-1 rounded-full font-bold text-[0.6em] ml-2'>
+                      {component.state}
                     </span>
                   ) : (
                     <></>

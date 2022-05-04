@@ -1,4 +1,6 @@
+import { Player, Context } from 'tone';
 import { Api } from './api';
+import { audioPlayer } from './audio-player';
 import { Danny } from './danny';
 
 interface StepInfo {
@@ -27,32 +29,25 @@ class Step {
     this.isActive = isActive;
   }
 
-  private async audioPlay(url): Promise<void> {
-    return new Promise((resolve) => {
-      const context = new AudioContext();
-      const source = context.createBufferSource();
+  // private async audioPlay(url): Promise<void> {
+  //   return new Promise((resolve) => {
+  //     const player = new Player(url).toDestination();
 
-      fetch(url)
-        .then((res) => res.arrayBuffer())
-        .then((ArrayBuffer) => context.decodeAudioData(ArrayBuffer))
-        .then((audioBuffer) => {
-          source.buffer = audioBuffer;
-          source.connect(context.destination);
-          source.start();
-
-          source.onended = () => resolve();
-        });
-    });
-  }
+  //     player.buffer.onload = () => {
+  //       player.start();
+  //       player.onstop = () => resolve();
+  //     };
+  //   });
+  // }
 
   private complete() {
     this.isComplete = true;
   }
 
-  execute(danny: Danny) {
+  execute(getDanny: () => Danny) {
     switch (this.operation) {
       case 'play:audio':
-        return this.audioPlay(this.value).then(() => this.complete());
+        return audioPlayer.play(this.value).then(() => this.complete());
 
       case 'invoke:api':
         return Api.invoke(this.value, { method: 'POST' }).then(() =>
@@ -66,10 +61,10 @@ class Step {
 
         return new Promise((resolve) => {
           const getValue = (lhs: string[]) => {
-            if (lhs.length === 1) return danny[lhs[0]];
-            else if (lhs.length === 2) return danny[lhs[0]][lhs[1]];
+            if (lhs.length === 1) return getDanny()[lhs[0]];
+            else if (lhs.length === 2) return getDanny()[lhs[0]][lhs[1]];
             else if (lhs.length === 3)
-              return danny[lhs[0]].find(
+              return getDanny()[lhs[0]].find(
                 (components) => components.id === lhs[1].substring(1)
               )[lhs[2]];
             else return null;
